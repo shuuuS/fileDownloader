@@ -1,7 +1,7 @@
-import os
-from os.path import splitext, exists
+from os import scandir, rename
+from os.path import splitext, exists, join
 from shutil import move
-import time
+from time import sleep
 
 import logging
 
@@ -18,39 +18,41 @@ docs_dir = "C:/Users/Kuba/Downloads/PDF"
 image_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
 
 # ? supported Document types
-document_extensions = [".doc", ".docx", ".odt", ".xls", ".xlsx", ".txt"]
+document_extensions = [".doc", ".docx", ".odt", ".xls", ".xlsx", ".txt", ".pdf"]
 
 # ? supported zip/rar types
 zip_extensions = ['.rar', ".zip"]
 
 
 
-def make_unique(path):
-    filename, extension = splitext(path)
+def make_unique(dest, name):
+    filename, extension = splitext(name)
     counter = 1
-    # IF FILE EXISTS, ADDS NUMBER TO THE END OF THE FILENAME
-    while exists(path):
-        path = f"{filename} ({counter}){extension}"
+    # * IF FILE EXISTS, ADDS NUMBER TO THE END OF THE FILENAME
+    while exists(f"{dest}/{name}"):
+        name = f"{filename}({str(counter)}){extension}"
         counter += 1
 
-    return path
+    return name
 
 def move_file(dest, entry, name):
     if exists(f"{dest}/{name}"):
-        unique_name = make_unique(name)
-        os.rename(entry, unique_name)
+        unique_name = make_unique(dest, name)
+        oldName = join(dest, name)
+        newName = join(dest, unique_name)
+        rename(oldName, newName)
     move(entry, dest)
 
 
 class ChooseDirectory(FileSystemEventHandler):
     def on_modified(self, event):
-        with os.scandir(source_dir) as entries:
+        with scandir(source_dir) as entries:
             for entry in entries:
                 name = entry.name
                 self.check_document_files(entry, name)
                 self.check_image_files(entry, name)
                 self.check_zip_files(entry, name)
-                self.check_document_files(entry, name)
+
 
     def check_document_files(self, entry, name):  # * Checks all Document Files
         for documents_extension in document_extensions:
@@ -62,7 +64,7 @@ class ChooseDirectory(FileSystemEventHandler):
         for img_extension in image_extensions:
             if name.endswith(img_extension) or name.endswith(img_extension.upper()):
                 move_file(images_dir, entry, name)
-                logging.info(f"Moved zip/rar file: {name}")
+                logging.info(f"Moved img file: {name}")
 
     def check_zip_files(self, entry, name):
         for zip_extension in zip_extensions:
@@ -83,7 +85,7 @@ if __name__ == "__main__":
     observer.start()
     try:
         while True:
-            time.sleep(10)
+            sleep(10)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
